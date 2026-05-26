@@ -1,45 +1,39 @@
-/**
- * TAYFUN BÜTÇE - Çevrimdışı Çalışma ve Önbellek Yönetimi
- */
-const CACHE_NAME = 'tayfun-butce-v2';
-const assetsToCache = [
-    './',
-    './index.html',
-    './style.css',
-    './app.js',
-    './manifest.json',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+const CACHE_NAME = 'finans-analiz-v1';
+const ASSETS = [
+  'index.html',
+  'manifest.json',
+  'sw.js'
 ];
 
-// Uygulama Kurulum Aşaması (Önbelleğe Alma)
-self.addEventListener('install', e => {
-    e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(assetsToCache);
-        })
-    );
+// Kurulum ve önbelleğe alma
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS);
+    }).then(() => self.skipWaiting())
+  );
 });
 
-// Veri İsteklerini Yakalama Politikası (Önce Önbellek, Yoksa Ağ Kontrolü)
-self.addEventListener('fetch', e => {
-    e.respondWith(
-        caches.match(e.request).then(cachedResponse => {
-            return cachedResponse || fetch(e.request);
+// Eski önbellekleri temizleme
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
         })
-    );
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
-// Eski Önbellek Sürümlerini Temizleme Filtresi
-self.addEventListener('activate', e => {
-    e.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(
-                keys.map(key => {
-                    if (key !== CACHE_NAME) {
-                        return caches.delete(key);
-                    }
-                })
-            );
-        })
-    );
+// Ağ isteklerini yönetme (Çevrimdışı destek için)
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    fetch(e.request).catch(() => {
+      return caches.match(e.request);
+    })
+  );
 });
